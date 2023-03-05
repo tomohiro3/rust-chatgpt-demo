@@ -1,10 +1,13 @@
-use cpal::traits::{DeviceTrait, HostTrait, StreamTrait};
 use std::{time,thread};
+use cpal::traits::StreamTrait;
 use std::fs::File;
-use hound;
 use reqwest::{header::HeaderMap,blocking::Client, blocking::multipart::Form};
-
+use dotenvy::dotenv;
+use std::env;
 use std::io::Read;
+
+mod stream;
+mod wav_writer;
 
 #[derive(serde::Deserialize)]
 struct TranscriptionResponse {
@@ -25,57 +28,32 @@ struct Content {
     content: String,
 }
 
-const SAMPLE_RATE: f64 = 44_100.0; //サンプリングレート
-const CHANNELS: i32 = 2; //チャンネル数(1->モノラル, 2->ステレオ)
-// const INTERLEAVED: bool = true; //謎
-// const FRAMES_PER_BUFFER: u32 = 64; //フレームごとのバッファ数
-const BITS_PER_SAMPLE :u16 = 16; //量子化ビット数
-// const NUM_SECONDS: i32 = 10; //録音秒数
-// const BUF_SIZE: usize = SAMPLE_RATE as usize * NUM_SECONDS as usize; //保存するバッファサイズ
 
-
+// モジュール分けると型とか諸々依存関係強くなる。
+// 関数型言語のお作法を知る必要あり。カプセル化とかするのか。
+// コールバックで渡したい。
 fn main() {
-    let spec = hound::WavSpec {
-        channels: CHANNELS as u16, //チャンネル数(1->モノラル, 2->ステレオ)
-        sample_rate: SAMPLE_RATE as u32, //サンプリングレート
-        bits_per_sample: BITS_PER_SAMPLE, //量子化ビット数
-        sample_format: hound::SampleFormat::Int, //インテジャーPCM
-    };
-    let mut writer = hound::WavWriter::create(/*好きなファイルパス名->*/"sample.wav", spec).unwrap();
+    dotenv().ok();
 
-    let host = cpal::default_host();
-    let device = host.default_input_device().expect("Failed to get default input device");
+    let writer = wav_writer::setup_writer();
+    let stream = stream::setup_stream(writer);
     
-    let config = device
-    .default_input_config()
-    .expect("No default input config")
-    .config();
-
-    let err_fn = |err| eprintln!("an error occurred on the output audio stream: {}", err);
-
-    let stream = device.build_input_stream(
-            &config.into(),
-            move|data:&[f32], _: &_| {
-
-                for sample in data.iter() {
-                    let amplitude = i16::MAX as f32;
-                    writer.write_sample((sample * amplitude) as i16).unwrap(); //書き出し
-                }
-            },
-            err_fn,
-    None
-        ).expect("Stream ended");
     stream.play().expect("Failed to start stream");
 
     let three_sec = time::Duration::from_millis(3000);
         thread::sleep(three_sec);
     stream.pause().expect("failed");
 
-    const API_KEY:&str = "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";
+
+
+    let api_key = env::var("OPENAI_API_KEY").expect("EMAIL_BACKEND not found");
     let client = Client::new();
     let mut headers =HeaderMap::new();
-    let token = format!("Bearer {API_KEY}");
+    let token = format!("Bearer {api_key}");
     headers.insert("Authorization", token.parse().unwrap());
+
+
+    
 
     let mut file = File::open("sample.wav").expect("Failed");
     let mut file_contents = vec![];
@@ -91,6 +69,9 @@ fn main() {
     .send().expect("Failed")
     .json().expect("failed");
     
+
+
+
     let client2 = Client::new();
     let mut headers2 =HeaderMap::new();
     headers2.insert("Content-Type", "application/json".parse().unwrap());

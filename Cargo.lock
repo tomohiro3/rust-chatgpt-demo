@@ -109,6 +109,7 @@ name = "chatgpt-rust-demo"
 version = "0.1.0"
 dependencies = [
  "cpal",
+ "dotenvy",
  "hound",
  "reqwest",
  "serde",
@@ -214,6 +215,12 @@ name = "dasp_sample"
 version = "0.11.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0c87e182de0887fd5361989c677c4e8f5000cd9491d6d563161a8f3a5519fc7f"
+
+[[package]]
+name = "dotenvy"
+version = "0.15.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "03d8c417d7a8cb362e0c37e5d815f5eb7c37f79ff93707329d5a194e42e54ca0"
 
 [[package]]
 name = "encoding_rs"
