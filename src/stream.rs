@@ -1,3 +1,4 @@
+use std::f32::consts::PI;
 use cpal::traits::{DeviceTrait, HostTrait};
 use hound::WavWriter;
 use crate::File;
@@ -19,8 +20,9 @@ pub fn setup_stream(mut writer:WavWriter<BufWriter<File>>)->Stream {
             &config.into(),
             move|data:&[f32], _: &_| {
 
-                for sample in data.iter() {
-                    let amplitude = i16::MAX as f32;
+                for t in data.iter() {
+                    let sample = t;
+                    let amplitude = i16::MAX as f32; // 音の大きさを増幅させる
                     writer.write_sample((sample * amplitude) as i16).unwrap(); //書き出し
                 }
             },

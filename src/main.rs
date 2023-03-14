@@ -7,7 +7,7 @@ use std::env;
 use std::io::Read;
 
 mod stream;
-mod wav_writer;
+mod voice_writer;
 
 #[derive(serde::Deserialize)]
 struct TranscriptionResponse {
@@ -35,13 +35,15 @@ struct Content {
 fn main() {
     dotenv().ok();
 
-    let writer = wav_writer::setup_writer();
+    let writer = voice_writer::setup_writer();
     let stream = stream::setup_stream(writer);
     
+    println!("Talk now");
     stream.play().expect("Failed to start stream");
-
-    let three_sec = time::Duration::from_millis(3000);
-        thread::sleep(three_sec);
+    
+    let five_sec = time::Duration::from_millis(5000);
+    thread::sleep(five_sec);
+    println!("End");
     stream.pause().expect("failed");
 
 
@@ -53,7 +55,7 @@ fn main() {
     headers.insert("Authorization", token.parse().unwrap());
 
 
-    
+
 
     let mut file = File::open("sample.wav").expect("Failed");
     let mut file_contents = vec![];
@@ -68,6 +70,7 @@ fn main() {
     .multipart(form)
     .send().expect("Failed")
     .json().expect("failed");
+    println!("{}", response.text);
     
 
 
